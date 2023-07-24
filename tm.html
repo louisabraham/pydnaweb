@@ -1,0 +1,198 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" href="static/mec_tm.gif">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+  <link rel="stylesheet" href="static/stylesheet.css">
+  <link rel="shortcut icon" href="static/favicon.ico">
+  <title>Tm</title>
+</head>
+
+<body>
+  <nav class="navbar navbar-inverse">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href=".">Tm</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <div id="results">
+    </div>
+
+    <div class="row">
+      <div>
+        <table class="table-bordered">
+          <tbody>
+            <tr>
+              <td><label for="table">nn_table</label></td>
+              <td colspan=4><select id="table" name="table">
+                  <option value="1">DNA_NN1 - Breslauer et al. (1986), Proc Natl Acad Sci USA 83: 3746-3750</option>
+                  <option value="2">DNA_NN2 - Sugimoto et al. (1996), Nuc Acids Res 24 : 4501-4505</option>
+                  <option value="3">DNA_NN3 - Allawi and SantaLucia (1997), Biochemistry 36: 10581-10594</option>
+                  <option selected value="4">DNA_NN4 - SantaLucia &amp; Hicks (2004), Annu. Rev. Biophys. Biomol. Struct
+                    33: 415-440</option>
+                </select></td>
+            </tr>
+            <td><label for="salt">saltcorr</label></td>
+            <td colspan=4><select id="salt" name="salt">
+                <option value="1">1. 16.6 x log[Na+] (Schildkraut &amp; Lifson (1965), Biopolymers 3: 195-208)</option>
+                <option value="2">2. 16.6 x log([Na+]/(1.0 + 0.7*[Na+])) (Wetmur (1991), Crit Rev Biochem Mol Biol 126:
+                  227-259)</option>
+                <option value="3">3. 12.5 x log(Na+] (SantaLucia et al. (1996), Biochemistry 35: 3555-3562</option>
+                <option value="4">4. 11.7 x log[Na+] (SantaLucia (1998), Proc Natl Acad Sci USA 95: 1460-1465</option>
+                <option value="5">5. Correction for deltaS: 0.368 x (N-1) x ln[Na+] (SantaLucia (1998), Proc Natl Acad
+                  Sci USA 95: 1460-1465)</option>
+                <option value="6">6. (4.29(%GC)-3.95)x1e-5 x ln[Na+] + 9.40e-6 x ln[Na+]^2 (Owczarzy et al. (2004),
+                  Biochemistry 43: 3537-3554)</option>
+                <option selected value="7">7. Complex formula with decision tree and 7 empirical constants.</option>
+              </select></td>
+            </tr>
+            <tr>
+              <td><label for="Na">Na</label></td>
+              <td><input id="Na" name="Na" type="text" value="40.00"> mM</td>
+              <td><label for="Tris">Tris</label></td>
+              <td><input id="Tris" name="Tris" type="text" value="75.00"> mM</td>
+            </tr>
+            <tr>
+              <td><label for="Mg">Mg</label></td>
+              <td><input id="Mg" name="Mg" type="text" value="1.50"> mM</td>
+              <td><label for="K">K</label></td>
+              <td><input id="K" name="K" type="text" value="0.00"> mM</td>
+            </tr>
+            <tr>
+              <td><label for="dnac1">dnac1</label></td>
+              <td><input id="dnac1" name="dnac1" type="text" value="250.00"> µM</td>
+              <td><label for="dNTPs">dNTPs</label></td>
+              <td><input id="dNTPs" name="dNTPs" type="text" value="0.80"> mM</td>
+            </tr>
+            <tr>
+              <td><label for="dnac2">dnac2</label></td>
+              <td><input id="dnac2" name="dnac2" type="text" value="250.00"> µM</td>
+              <td colspan=4>
+                <a href="/static/info.html" class="btn btn-primary btn-block">info</a>
+              </td>
+            </tr>
+            <tr>
+              <td colspan=4>
+                <textarea cols="100" id="contents" rows="20">
+&gt;MyPrimer
+ATGGCAGTTGAGAAGA</textarea>
+            </tr>
+            <tr>
+              <td colspan=4>
+                <div class="d-flex justify-content-start">
+
+                  <div class="col-auto">
+                    <a href="/" class="btn btn-primary me-2">Home</a>
+                  </div>
+                  <div class="col-auto">
+                    <button class="btn btn-danger me-2" id="clear">Clear</button>
+                  </div>
+                  <div class="col-auto">
+                    <button class="btn btn-success me-2" id="run">Calculate</button>
+                  </div>
+                  <div class="col-auto">
+                    powered by <a href="https://github.com/BjornFJohansson/pydna">pydna <span
+                        id='version'>(loading)</span></a>
+                  </div>
+
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+</body>
+<script>
+  async function main() {
+    self.pyodide = await loadPyodide();
+    let pyodide = self.pyodide;
+    await pyodide.loadPackage("micropip");
+    const micropip = pyodide.pyimport("micropip");
+    await micropip.install("https://louisabraham.github.io/pydna/dist/pydna-5.2.0.post79+d9fd6fd-py3-none-any.whl");
+    // Pyodide is now ready to use...
+
+    version = document.getElementById("version")
+    version.innerHTML = pyodide.runPython("import pydna; pydna.__version__");
+
+    pyodide.runPython(`
+import js
+import datetime
+
+from textwrap import dedent
+from pydna.parsers import parse
+from pydna.tm import tm_default
+
+from Bio.SeqUtils import MeltingTemp as _mt
+
+nn_tables = {"1": _mt.DNA_NN1,
+             "2": _mt.DNA_NN2,
+             "3": _mt.DNA_NN3,
+             "4": _mt.DNA_NN4}
+
+def get(name):
+  return js.document.getElementById(name).value
+
+def tm(primer_text):
+  primers = parse(primer_text)
+  results = []
+  for primer in primers:
+      tm = tm_default(primer.seq,
+                      check=True,
+                      strict=True,
+                      c_seq=None,
+                      shift=0,
+                      nn_table=nn_tables[get('table')],
+                      tmm_table=None,
+                      imm_table=None,
+                      de_table=None,
+                      dnac1=float(get('dnac1')),
+                      dnac2=float(get('dnac2')),
+                      selfcomp=False,
+                      Na=float(get('Na')),
+                      K=float(get('K')),
+                      Tris=float(get('Tris')),
+                      Mg=float(get('Mg')),
+                      dNTPs=float(get('dNTPs')),
+                      saltcorr=int(get('salt')))
+      primer.description = f"tm={round(tm, 3)}"
+      results.append(primer.format("fasta"))
+  return results
+`)
+
+  };
+  let ready = main();
+  const contents = document.getElementById("contents");
+  const results = document.getElementById("results");
+  let button = document.getElementById("run");
+  button.addEventListener("click", async () => {
+    await ready;
+    user_data = contents.value;
+    ans = self.pyodide.globals.get("tm")(user_data).toJs();
+    ans.forEach((result) => {
+      const pre = document.createElement("pre");
+      pre.innerHTML = result;
+      results.appendChild(pre);
+    });
+  })
+  button = document.getElementById("clear");
+  button.addEventListener("click", async () => {
+    await ready;
+    contents.value = "";
+    results.innerHTML = "";
+  })
+
+</script>
+
+</html>

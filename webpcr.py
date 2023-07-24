@@ -3,27 +3,18 @@
 """docstring."""
 
 import datetime
-
 from textwrap import dedent
 
-from flask import Flask
-from flask import redirect
-from flask import render_template
-from flask import request
-from flask import url_for
-
-from wtforms.fields import SelectField
-from wtforms.fields import DecimalField
-from wtforms.fields import TextAreaField
-from wtforms.fields import SubmitField
-
 from Bio.SeqUtils import MeltingTemp as _mt
-
+from flask import Flask, redirect, render_template, request, url_for
+from flask_wtf import FlaskForm
 from pydna import __version__ as version
-from pydna.parsers import parse
 from pydna.amplify import Anneal
 from pydna.design import primer_design
-
+from pydna.parsers import parse
+from pydna.tm import tm_default
+from wtforms.fields import (DecimalField, SelectField, SubmitField,
+                            TextAreaField)
 
 # https://blog.pythonanywhere.com/121
 # export FLASK_APP=webpcr.py&&export FLASK_ENV=development&&flask run
@@ -40,9 +31,7 @@ from pydna.design import primer_design
 
 
 
-from pydna.tm import tm_default
 
-from flask_wtf import FlaskForm
 
 nn_tableoptions = [(1, "DNA_NN1 - Breslauer et al. (1986), "
                        "Proc Natl Acad Sci USA 83: 3746-3750"),
